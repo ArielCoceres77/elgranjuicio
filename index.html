@@ -327,20 +327,10 @@ function renderAdmin(){
   app.innerHTML = `<h2>Administración <span class="live">en vivo</span></h2><p class="lead">Se actualiza sola cada 5 segundos. Se aprueba con ${PASS} puntos.</p>
     <div class="stats" id="stats"></div><div class="tablewrap"><table><thead><tr><th></th><th>Alumno/a</th><th class="n">H1</th><th class="n">H2</th><th class="n">H3</th><th class="n">Total</th><th>Estado</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
     <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="btn ghost sm" id="csv">Copiar planilla</button><button class="btn ghost sm" id="out">Cerrar sesión</button><span class="note" id="cp"></span></div>
-    <p class="note" style="margin-top:16px">Un solo responsable por historia: se suma el grado del elegido (máximo 4 por historia, 12 en total). Elegir a un no responsable da 0. «Reabrir» borra los votos del alumno para que vuelva a votar todo. Todos los votos quedan también en la planilla de Google.</p>
-    <div style="margin-top:22px;padding-top:16px;border-top:1px dashed var(--line);display:flex;gap:12px;align-items:center;flex-wrap:wrap"><button class="btn sm" id="reset" style="background:var(--red)">Reseteo</button><span class="note">Borra todos los votos de la planilla. Usalo solo para limpiar las pruebas.</span></div>`;
+    <p class="note" style="margin-top:16px">Un solo responsable por historia: se suma el grado del elegido (máximo 4 por historia, 12 en total). Elegir a un no responsable da 0. «Reabrir» borra los votos del alumno para que vuelva a votar todo. Todos los votos quedan también en la planilla de Google.</p>`;
   drawAdmin();
   stopAdmin();
   adminTimer = setInterval(pollAdmin, 5000);
-  $('#reset').onclick=()=>{
-    dialog(`<h2>¿Resetear todo?</h2><p>Se borran <b>todos los votos de todos los alumnos</b> de la planilla. No se puede deshacer.</p><div style="display:flex;gap:10px"><button class="btn" id="ok" style="background:var(--red)">Sí, borrar todo</button><button class="btn ghost" id="no">Cancelar</button></div><div id="e"></div>`);
-    $('#no').onclick=closeDialog;
-    $('#ok').onclick=async()=>{ $('#ok').disabled=true;
-      try{ const x=await apiPost({action:'reset', pass:adminPass});
-        if(x.ok){ closeDialog(); adminRows=[]; drawAdmin(); pollAdmin(); return; }
-        $('#ok').disabled=false; $('#e').innerHTML = x.error==='accion' ? '<div class="err">El script de la planilla todavía no tiene el Reseteo. Hay que actualizar Code.gs.</div>' : '<div class="err">No se pudo resetear.</div>';
-      }catch(e){ $('#ok').disabled=false; $('#e').innerHTML='<div class="err">No me pude conectar con la planilla.</div>'; } };
-  };
   $('#out').onclick=()=>{ adminPass=''; stopAdmin(); renderAdmin(); };
   $('#csv').onclick=async ()=>{
     const rows=[['Alumno','H1','H2','H3','Total','Estado']].concat(sorted().map(r=>{const {t,n}=totalOf(r);return [r.nombre, r.h?.h1?.pts??'', r.h?.h2?.pts??'', r.h?.h3?.pts??'', t, statusText(status(t,n))];}));
