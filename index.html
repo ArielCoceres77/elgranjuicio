@@ -76,8 +76,6 @@ b{color:inherit}
 .case .st b{color:var(--cyan)}
 .case.done{border-color:rgba(62,224,122,.55)}
 .case.done .st b{color:var(--green)}
-.case.recu{border-color:rgba(168,85,247,.55)}
-.lockbadge.open{padding:5px 9px;font-size:11px}
 .case.locked{cursor:not-allowed;background:repeating-linear-gradient(135deg,rgba(20,24,50,.85) 0 12px,rgba(28,32,62,.85) 12px 24px)}
 .case.locked:hover{transform:none;box-shadow:none;border-color:var(--line)}
 .case.locked .faces img{filter:grayscale(1) brightness(.6)}
@@ -194,14 +192,8 @@ const STORIES = [
   {k:'camila',name:'Camila Olmedo',role:'Comunicadora de la clínica',d:'Publicó un testimonio generado con IA con la placa «testimonio real». La gente se calmó y dejó de cambiar sus contraseñas.'},
   {k:'damian',name:'Damián Benítez · Agente 404',role:'Investigador',d:'Entró sin autorización a los registros para rastrear la filtración, y lo dijo antes de que se lo preguntaran.'},
   {k:'lucho',name:'Lucho Benítez',role:'Ingeniero de sistemas de salud',d:'Durante diez meses registró la filtración del sistema de salud como «fallo de red», sin avisarle a nadie.'}]},
- {id:'h4', n:'Historia 4', title:'La voz prestada', recu:true, people:[
-  {k:'r_miguel',name:'Miguel Ángel Ferreyra',role:'Veterano de Malvinas',d:'Su voz clonada aparece en la publicidad de Tierra Firme. Años antes había entregado sus entrevistas grabadas a una empresa para probar una transcripción, sin preguntarle a nadie.'},
-  {k:'r_valeria',name:'Valeria Gauna',role:'Conductora de radio',d:'Pasó en su programa la tanda con voces de vecinos porque estaba paga. El detector marcó 81 % de voz sintética.'},
-  {k:'r_eulalia',name:'Eulalia Benítez',role:'Productora rural',d:'En el programa piloto cargó los nombres, los lotes y lo que produce cada vecino. Descubrió la voz de doña Ramona, fallecida hace tres años, en la publicidad.'},
-  {k:'r_mateo',name:'Mateo Benítez',role:'Técnico del programa piloto',d:'Compartió los datos del piloto con la empresa socia sin pedir por escrito para qué los iban a usar. Con esos datos armaron la lista de los endeudados.'},
-  {k:'r_glitchini',name:'El Magnífico Glitchini',role:'Dueño de Espejo Inteligente',d:'Su plataforma fabricó los testimonios con voces de vecinos, incluida la de una mujer fallecida. Se defiende diciendo que «el usuario hizo clic en aceptar».'},
-  {k:'r_pato',name:'Lucas «Pato» Paredes',role:'Creador de contenido',d:'Generó con IA las tomas de campos verdes y del yaguareté para la publicidad, sin ningún aviso de que eran artificiales.'},
-  {k:'r_valentina',name:'Valentina Sosa',role:'Archivista de historias orales',d:'Subió trescientas grabaciones de vecinos a una nube comercial para transcribirlas, con la configuración que venía, sin leer cuánto tiempo las guardaban ni para qué.'}]}
+ {id:'h4', n:'Historia 4', title:'La voz prestada', locked:true, people:[
+  {k:'r_miguel'},{k:'r_valeria'},{k:'r_eulalia'},{k:'r_mateo'},{k:'r_glitchini'},{k:'r_pato'},{k:'r_valentina'}]}
 ];
 // Enlace de la aplicación web de Apps Script (la planilla de votos)
 const API = 'https://script.google.com/macros/s/AKfycby-C_OvO34o6FZ1s916StQ8G-zLBWitP896DLQMwVgv2ptSg6UnvRwoR3p26brBiI6r/exec';
@@ -224,8 +216,8 @@ async function apiPost(body){
   return r.json();
 }
 
-function totalOf(doc){ let t=0,n=0; for(const s of ['h1','h2','h3','h4']){ const v=doc?.h?.[s]; if(v){t+=Number(v.pts)||0;n++;} } return {t,n}; }
-function status(t,n){ if(t>=PASS) return 'g'; if(n>=4) return 'r'; return 'a'; }
+function totalOf(doc){ let t=0,n=0; for(const s of ['h1','h2','h3']){ const v=doc?.h?.[s]; if(v){t+=Number(v.pts)||0;n++;} } return {t,n}; }
+function status(t,n){ if(t>=PASS) return 'g'; if(n>=3) return 'r'; return 'a'; }
 function statusText(s){ return s==='g'?'APROBADO':s==='r'?'DESAPROBADO':'EN CURSO'; }
 function scaleHTML(t){ let h='<div class="scale" aria-label="Escala del 1 al 10">'; for(let i=1;i<=10;i++){ h+=`<i class="${t>=i?'f':''} ${t>=PASS&&t>=i?'p':''} ${i===PASS?'mark':''}">${i}</i>`;} return h+'</div>'; }
 function dialog(html){ $('#dlg').innerHTML = `<div class="dlg"><div class="card">${html}</div></div>`; }
@@ -291,12 +283,12 @@ function renderHome(){
         <div class="num">${st.n}</div><h3>${st.title}</h3><div class="faces">${faces}</div>
         <div class="st">No se puede votar todavía.</div><div class="lockbadge">${lock}RECUPERATORIO</div></div>`;
     } else {
-      h += `<button class="case ${v?'done':''} ${st.recu?'recu':''}" data-s="${st.id}">${st.recu?'<div class="lockbadge open">RECUPERATORIO</div>':''}<div class="num">${st.n}</div><h3>${st.title}</h3><div class="faces">${faces}</div>
+      h += `<button class="case ${v?'done':''}" data-s="${st.id}"><div class="num">${st.n}</div><h3>${st.title}</h3><div class="faces">${faces}</div>
         <div class="st">${v?`Votada · <b>${v.pts} punto${v.pts===1?'':'s'}</b>`:`${st.people.length} protagonistas · <b>Votar</b>`}</div></button>`;
     }
   }
   h += `</div><div class="total"><div class="light ${s==='g'?'g':s==='r'?'r':''}"></div>
-     <div><div class="note">Tu total (${n} de 4 historias)</div><div style="font-family:var(--disp);font-size:30px;font-weight:700">${t} punto${t===1?'':'s'}</div></div>
+     <div><div class="note">Tu total (${n} de 3 historias)</div><div style="font-family:var(--disp);font-size:30px;font-weight:700">${t} punto${t===1?'':'s'}</div></div>
      ${scaleHTML(t)}<span class="tag ${s}">${statusText(s)}</span></div>
      <p class="note">Se aprueba con 7 puntos en total. Si pasás de 10, mejor todavía: ya aprobaste.</p>`;
   app.innerHTML = h;
@@ -374,15 +366,15 @@ function renderAdmin(){
     return;
   }
   app.innerHTML = `<h2>Administración <span class="live">en vivo</span></h2><p class="lead">Se actualiza sola cada 5 segundos. Se aprueba con ${PASS} puntos.</p>
-    <div class="stats" id="stats"></div><div class="tablewrap"><table><thead><tr><th></th><th>Alumno/a</th><th class="n">H1</th><th class="n">H2</th><th class="n">H3</th><th class="n">H4</th><th class="n">Total</th><th>Estado</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
+    <div class="stats" id="stats"></div><div class="tablewrap"><table><thead><tr><th></th><th>Alumno/a</th><th class="n">H1</th><th class="n">H2</th><th class="n">H3</th><th class="n">Total</th><th>Estado</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
     <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="btn ghost sm" id="csv">Copiar planilla</button><button class="btn ghost sm" id="out">Cerrar sesión</button><span class="note" id="cp"></span></div>
-    <p class="note" style="margin-top:16px">Un solo responsable por historia: se suma el grado del elegido (máximo 4 por historia, 16 en total con el recuperatorio). Elegir a un no responsable da 0. «Reabrir» borra los votos del alumno para que vuelva a votar todo. Todos los votos quedan también en la planilla de Google.</p>`;
+    <p class="note" style="margin-top:16px">Un solo responsable por historia: se suma el grado del elegido (máximo 4 por historia, 12 en total). Elegir a un no responsable da 0. «Reabrir» borra los votos del alumno para que vuelva a votar todo. Todos los votos quedan también en la planilla de Google.</p>`;
   drawAdmin();
   stopAdmin();
   adminTimer = setInterval(pollAdmin, 5000);
   $('#out').onclick=()=>{ adminPass=''; stopAdmin(); renderAdmin(); };
   $('#csv').onclick=async ()=>{
-    const rows=[['Alumno','H1','H2','H3','H4','Total','Estado']].concat(sorted().map(r=>{const {t,n}=totalOf(r);return [r.nombre, r.h?.h1?.pts??'', r.h?.h2?.pts??'', r.h?.h3?.pts??'', r.h?.h4?.pts??'', t, statusText(status(t,n))];}));
+    const rows=[['Alumno','H1','H2','H3','Total','Estado']].concat(sorted().map(r=>{const {t,n}=totalOf(r);return [r.nombre, r.h?.h1?.pts??'', r.h?.h2?.pts??'', r.h?.h3?.pts??'', t, statusText(status(t,n))];}));
     try{ await navigator.clipboard.writeText(rows.map(r=>r.join('\t')).join('\n')); $('#cp').textContent='Copiada. Pegala en una planilla.'; }catch(e){ $('#cp').textContent='El navegador no dejó copiar.'; }
   };
 }
@@ -395,11 +387,11 @@ function sorted(){ return adminRows.filter(r=>r.nombre).slice().sort((a,b)=>Stri
 function drawAdmin(){
   const tb=$('#tb'); if(!tb) return;
   const rows=sorted(); let ap=0,de=0,cu=0;
-  if(!rows.length) tb.innerHTML='<tr><td colspan="9">Nadie votó todavía.</td></tr>';
+  if(!rows.length) tb.innerHTML='<tr><td colspan="8">Nadie votó todavía.</td></tr>';
   else tb.innerHTML = rows.map(r=>{
     const {t,n}=totalOf(r); const s=status(t,n); if(s==='g')ap++; else if(s==='r')de++; else cu++;
     const c = id => r.h?.[id] ? r.h[id].pts : '–';
-    return `<tr><td><div class="light ${s==='g'?'g':s==='r'?'r':'a'}"></div></td><td>${esc(r.nombre)}</td><td class="n">${c('h1')}</td><td class="n">${c('h2')}</td><td class="n">${c('h3')}</td><td class="n">${c('h4')}</td><td class="n"><b>${t}</b></td><td><span class="tag ${s}">${statusText(s)}</span></td><td><button class="btn ghost sm" data-del="${esc(r.clave)}">Reabrir</button></td></tr>`;
+    return `<tr><td><div class="light ${s==='g'?'g':s==='r'?'r':'a'}"></div></td><td>${esc(r.nombre)}</td><td class="n">${c('h1')}</td><td class="n">${c('h2')}</td><td class="n">${c('h3')}</td><td class="n"><b>${t}</b></td><td><span class="tag ${s}">${statusText(s)}</span></td><td><button class="btn ghost sm" data-del="${esc(r.clave)}">Reabrir</button></td></tr>`;
   }).join('');
   $('#stats').innerHTML = `<div class="stat">Votaron<b>${rows.length}</b></div><div class="stat" style="color:var(--green)">Aprobados<b>${ap}</b></div><div class="stat" style="color:var(--red)">Desaprobados<b>${de}</b></div><div class="stat" style="color:var(--amber)">En curso<b>${cu}</b></div>` + (adminErr?`<span class="note" style="align-self:center">${esc(adminErr)}</span>`:'');
   tb.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
