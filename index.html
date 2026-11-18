@@ -79,6 +79,7 @@ h2{font-family:'Spectral',serif;font-size:26px;margin:18px 0 6px}
 .ch label.y:has(input:checked){border-color:var(--red);background:rgba(163,52,42,.07);color:var(--red)}
 .ch label.n:has(input:checked){border-color:var(--green);background:rgba(47,138,74,.07);color:var(--green)}
 .p.miss{outline:2px solid var(--amber)}
+.p.pick{outline:3px solid var(--red);background:#fff4ef}
 .bar{position:sticky;bottom:0;margin-top:18px;background:rgba(243,236,223,.94);backdrop-filter:blur(6px);padding:12px 0;border-top:1px solid var(--line);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .btn{font:inherit;font-weight:700;background:var(--wood);color:#fff;border:none;border-radius:10px;padding:12px 20px;cursor:pointer}
 .btn:disabled{opacity:.45;cursor:default}
@@ -232,7 +233,7 @@ function renderName(){
 
 function renderHome(){
   const {t,n}=totalOf(me); const s=status(t,n);
-  let h = `<h2>Elegí una historia</h2><p class="lead">Mirá el video, entrá al caso y marcá, para cada protagonista, si es responsable o no. Cada historia se vota una sola vez.</p><div class="grid">`;
+  let h = `<h2>Elegí una historia</h2><p class="lead">Mirá el video, entrá al caso y elegí a un solo responsable. Cada historia se vota una sola vez.</p><div class="grid">`;
   for(const st of STORIES){
     const v = me?.h?.[st.id];
     const faces = st.people.map(p=>`<img src="${img(p.k)}" alt="">`).join('');
@@ -258,25 +259,24 @@ function openStory(sid){
   const v = me?.h?.[sid];
   if(v) return showResult(st, v);
   let h = `<button class="back" id="bk">← Volver a las historias</button>
-   <h2>${st.n} · ${st.title}</h2><p class="lead">Para cada protagonista elegí <b>Responsable</b> o <b>No responsable</b>. Acertar a un responsable suma según su grado de responsabilidad; acusar a alguien que no lo es resta ${PENALTY} puntos.</p><div class="people">`;
+   <h2>${st.n} · ${st.title}</h2><p class="lead">Elegí <b>un solo responsable</b>. Sumás puntos según su grado de responsabilidad: el responsable mayor da más puntos. Si elegís a alguien que no es responsable, no sumás.</p><div class="people">`;
   for(const p of st.people){
     h += `<div class="p" id="p-${p.k}"><img src="${img(p.k)}" alt="Retrato de ${esc(p.name)}"><div>
       <div class="role">${esc(p.role)}</div><h4>${esc(p.name)}</h4><p class="d">${esc(p.d)}</p>
-      <div class="ch"><label class="y"><input type="radio" name="${p.k}" value="si">Responsable</label>
-      <label class="n"><input type="radio" name="${p.k}" value="no">No responsable</label></div></div></div>`;
+      <div class="ch"><label class="y"><input type="radio" name="resp" value="${p.k}">Es el responsable</label></div></div></div>`;
   }
   h += `</div><div class="bar"><button class="btn" id="send">Enviar mi voto</button><span class="note" id="cnt"></span></div>`;
   app.innerHTML = h; scrollTo(0,0);
   $('#bk').onclick=()=>render();
-  const count=()=>{ const done=st.people.filter(p=>app.querySelector(`input[name="${p.k}"]:checked`)).length; $('#cnt').textContent=`${done} de ${st.people.length} protagonistas marcados`; };
-  app.querySelectorAll('input[type=radio]').forEach(i=>i.onchange=()=>{ i.closest('.p').classList.remove('miss'); count(); });
+  const count=()=>{ const c=app.querySelector('input[name="resp"]:checked'); const p=c&&st.people.find(x=>x.k===c.value); $('#cnt').textContent= p?`Elegiste a ${p.name}`:'Todavía no elegiste a nadie'; app.querySelectorAll('.p').forEach(el=>el.classList.toggle('pick', !!c && el.id==='p-'+c.value)); };
+  app.querySelectorAll('input[type=radio]').forEach(i=>i.onchange=()=>{ app.querySelectorAll('.p').forEach(el=>el.classList.remove('miss')); count(); });
   count();
   $('#send').onclick=()=>{
-    const marks={}; let missing=null;
-    for(const p of st.people){ const c=app.querySelector(`input[name="${p.k}"]:checked`); if(c) marks[p.k]=c.value; else { missing=missing||p; $('#p-'+p.k).classList.add('miss'); } }
-    if(missing){ $('#p-'+missing.k).scrollIntoView({behavior:'smooth',block:'center'}); return; }
-    const yes = st.people.filter(p=>marks[p.k]==='si').map(p=>esc(p.name));
-    dialog(`<h2>¿Confirmás tu veredicto?</h2><p>Marcaste como responsables a: <b>${yes.length?yes.join(', '):'nadie'}</b>.</p><p class="note">Después de enviarlo no se puede cambiar.</p>
+    const c=app.querySelector('input[name="resp"]:checked');
+    if(!c){ app.querySelectorAll('.p').forEach(el=>el.classList.add('miss')); $('#cnt').textContent='Elegí a un responsable antes de enviar.'; return; }
+    const marks={}; for(const p of st.people) marks[p.k] = p.k===c.value ? 'si' : 'no';
+    const chosen = st.people.find(p=>p.k===c.value);
+    dialog(`<h2>¿Confirmás tu veredicto?</h2><p>Elegiste como responsable a: <b>${esc(chosen.name)}</b>.</p><p class="note">Después de enviarlo no se puede cambiar.</p>
       <div style="display:flex;gap:10px;margin-top:14px"><button class="btn" id="ok">Sí, enviar</button><button class="btn ghost" id="no">Revisar</button></div><div id="e"></div>`);
     $('#no').onclick=closeDialog;
     $('#ok').onclick=async ()=>{
@@ -297,7 +297,7 @@ function openStory(sid){
 
 function showResult(st, v, fresh){
   const {t,n}=totalOf(me); const s=status(t,n);
-  const list = st.people.map(p=>`<li><img src="${img(p.k)}" alt="">${esc(p.name)}<span>${v.marks?.[p.k]==='si'?'Responsable':v.marks?.[p.k]==='no'?'No responsable':''}</span></li>`).join('');
+  const list = st.people.map(p=>`<li><img src="${img(p.k)}" alt="">${esc(p.name)}<span>${v.marks?.[p.k]==='si'?'Tu elegido':''}</span></li>`).join('');
   app.innerHTML = `<button class="back" id="bk">← Volver a las historias</button>
    <div class="result"><div class="num" style="color:var(--gold);letter-spacing:2px;text-transform:uppercase;font-size:13px">${st.n} · ${st.title}</div>
    <p>${fresh?'¡Voto registrado! En esta historia sumaste':'En esta historia sumaste'}</p>
@@ -327,7 +327,7 @@ function renderAdmin(){
   app.innerHTML = `<h2>Administración <span class="live">en vivo</span></h2><p class="lead">Se actualiza sola cada 5 segundos. Se aprueba con ${PASS} puntos.</p>
     <div class="stats" id="stats"></div><div class="tablewrap"><table><thead><tr><th></th><th>Alumno/a</th><th class="n">H1</th><th class="n">H2</th><th class="n">H3</th><th class="n">Total</th><th>Estado</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
     <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="btn ghost sm" id="csv">Copiar planilla</button><button class="btn ghost sm" id="out">Cerrar sesión</button><span class="note" id="cp"></span></div>
-    <p class="note" style="margin-top:16px">Máximos posibles: H1 = 9 · H2 = 12 · H3 = 12. Acusar a un no responsable resta ${PENALTY} (nunca baja de 0 por historia). «Reabrir» borra los votos del alumno para que vuelva a votar todo. Todos los votos quedan también en la planilla de Google.</p>`;
+    <p class="note" style="margin-top:16px">Un solo responsable por historia: se suma el grado del elegido (máximo 4 por historia, 12 en total). Elegir a un no responsable da 0. «Reabrir» borra los votos del alumno para que vuelva a votar todo. Todos los votos quedan también en la planilla de Google.</p>`;
   drawAdmin();
   stopAdmin();
   adminTimer = setInterval(pollAdmin, 5000);
